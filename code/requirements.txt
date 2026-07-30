@@ -1,0 +1,4 @@
+pydantic
+filterpy
+fastapi[standard]
+uvicorn[standard]

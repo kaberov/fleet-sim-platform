@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>API симулятор</title>
+    <style> 
+        kbd {
+            border-radius: 2px;
+            padding: 2px;
+            border: 1px solid black;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+        }
+        
+        tr:hover {
+            cursor: pointer;
+            background-color: #f5f5f5;
+        }
+        
+        tr.selected {
+            background-color: #a0c4ff;
+        }
+
+        .scrollable-container {
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .scrollable-container thead th {
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+        
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+        
+        input:checked + .slider:before {
+            -webkit-transform: translateX(26px);
+            -ms-transform: translateX(26px);
+            transform: translateX(26px);
+        }
+        
+        .slider.round {
+            border-radius: 34px;
+        }
+        
+        .slider.round:before {
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>API управления и мониторинга мобильных роботов</h1>
+    <div style= "display: flex; align-items: center; gap: 10px;">
+        <button id="pauseButton" onclick="handlePauseSwitch()" style="width: 200px;">Запустить симуляцию</button>
+        <div id='timeDiv'>Здесь появиться общая информация</div>
+    </div>
+    
+    <div class="row" style="display: flex;">
+        <div class="column" style="flex: 36%;">
+            <div class="scrollable-container" style="height: 250px;">
+                <table id="dataTable" style="user-select: none;">
+                    <thead>
+                        <tr style="cursor: auto;">
+                            <th>Имя</th>
+                            <th>Статус</th>
+                            <th>Реал. коорд.</th>
+                            <th>Набл. коорд.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Table rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div>
+                Нажимайте <kbd>&uarr;</kbd>  <kbd>&larr;</kbd> <kbd>&darr;</kbd> <kbd>&rarr;</kbd> для управления роботом.
+                <button onclick="takeControl()">Контроль</button>
+            </div>
+
+            <div class="row" style="display: flex; justify-content: space-between;">
+                <div>
+                    Камера:
+                    <label class="switch">
+                        <input type="checkbox" id="mySwitch">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <div style="text-align: right;">
+                    <label for="add_robot_name">Имя робота:</label>
+                    <input id="add_robot_name" name="add_robot_name" type="text" placeholder="">
+                    <br>
+                    <label for="add_robot_x">Координата X:</label>
+                    <input id="add_robot_x" name="add_robot_x" type="number" step="0.01" placeholder="0.00" value="0.00" inputmode="decimal">
+                    <br>
+                    <label for="add_robot_y">Координата Y:</label>
+                    <input id="add_robot_y" name="add_robot_y" type="number" step="0.01" placeholder="0.00" value="0.00" inputmode="decimal">
+                    <br>
+                    <label for="add_robot_yaw">Угол поворота:</label>
+                    <input id="add_robot_yaw" name="add_robot_yaw" type="number" step="0.01" placeholder="0.00" value="0.00" inputmode="decimal">
+                    <br>
+                    <button onclick="addTask()" style="background-color: rgb(250, 244, 158); color: rgb(0, 0, 0);">Задание</button>
+                    <button onclick="addRobot()" style="background-color: rgb(123, 248, 179); color: rgb(0, 0, 0);">Добавить</button>
+                    <button id="removeButton" onclick="removeRobot()" style="background-color: rgb(255, 177, 177); color: rgb(0, 0, 0);">Удалить</button>
+                </div>
+            </div>
+
+            <!-- <form action="" onsubmit="sendMessage(event)">
+                <input type="text" id="messageText" autocomplete="off" />
+                <button>Send</button>
+            </form>
+
+            <div class="scrollable-container" style="height: 90px;">
+                <ul id='messages'>
+                </ul>
+            </div> -->
+        </div>
+        <div class="column" style="flex: 64%; display: flex;">
+            <img id="receivedImage1" src="" alt="Здесь появиться изображение" style="width: 50%; cursor: crosshair; user-select: none; display: block;" draggable="false"/>
+            <img id="receivedImage3" src="" alt="Здесь появиться изображение" style="width: 50%; user-select: none; display: none;" draggable="false"/>
+            <img id="receivedImage2" src="" alt="Здесь появиться изображение" style="width: 50%; user-select: none; height: 421px;" draggable="false"/>
+        </div>
+    </div>
+
+    
+    <script>
+        // var ws_msg = new WebSocket("ws://localhost:8000/msg");
+        var ws_info = new WebSocket("ws://localhost:8000/info");
+
+        var messages = document.getElementById('messages');
+        var timeDiv = document.getElementById('timeDiv');
+        var input = document.getElementById("messageText");
+        var receivedImage1 = document.getElementById("receivedImage1");
+        var receivedImage2 = document.getElementById("receivedImage2");
+        var receivedImage3 = document.getElementById("receivedImage3");
+
+        var img_x = -1
+        var img_y = -1
+        var v = 0
+        var theta = 0
+
+        var pause_state = true
+
+        // ws_msg.onmessage = function (event) {
+        //     var message = document.createElement('li')
+        //     var content = document.createTextNode(event.data)
+        //     message.appendChild(content)
+        //     messages.prepend(message)
+        // };
+        // function sendMessage(event) {
+        //     ws_msg.send(input.value)
+        //     input.value = ''
+        //     event.preventDefault()
+        // }
+
+        let tableData = [
+            { name: "Test1", status: 'Idle', real_pose: '0.0 0.0 0.0' , noise_velocity: '0.0 0.0' },
+            { name: "Test2", status: 'Idle', real_pose: '0.0 0.0 0.0' , noise_velocity: '0.0 0.0' },
+            { name: "Test3", status: 'Idle', real_pose: '0.0 0.0 0.0' , noise_velocity: '0.0 0.0' },
+            { name: "Test4", status: 'Idle', real_pose: '0.0 0.0 0.0' , noise_velocity: '0.0 0.0' },
+        ];
+
+        var selected_name = undefined
+
+        async function postSelect(name) {
+            const response = await fetch('http://127.0.0.1:8000/select', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({"name": name, "v": 0.0, "theta": 0.0})
+            });
+
+            updateData(await response.json());
+
+            if (selected_name != undefined) {
+                document.getElementById('add_robot_name').value = selected_name;
+            } else {
+                document.getElementById('add_robot_name').value = '';
+            }
+        }
+
+        function populateTable(dataArray) {
+            const tableBody = document.querySelector("#tableBody");
+            
+            tableBody.innerHTML = '';
+            
+            dataArray.forEach(item => {
+                const row = tableBody.insertRow();
+                Object.values(item).forEach(text => {
+                    const cell = row.insertCell();
+                    cell.textContent = text;
+                });
+                
+                row.addEventListener('click', function() {
+                    // var selectedRows = document.querySelectorAll('tr.selected');
+                    if (this.classList.contains('selected')) {
+                        postSelect(undefined)
+                    } else {
+                        postSelect(item.name)
+                        // selectedRows.forEach(function(row) {
+                        //     row.classList.remove('selected');
+                        // });
+                    }
+                    // this.classList.toggle('selected');
+                });
+            });
+        }
+
+        async function updateData(data) {
+            selected_name = data.current_follower_name;
+
+            timeDiv.textContent = 'Время: ' + data.time + ' Количество наблюдаемых роботов: ' + data.size
+
+            // if (tableData.length != data.table.length) {
+            //     tableData = data.table
+            //     populateTable(tableData);
+            // }
+
+            const btn = document.getElementById("pauseButton");
+
+            tableData = data.table;
+            populateTable(tableData);
+
+            var selectedRows = document.querySelectorAll('tr.selected');
+
+            selectedRows.forEach(function(row) {
+                row.classList.remove('selected');
+            });
+
+            const tableBody = document.querySelector("#tableBody");
+
+            for (let i = 0; i < tableBody.children.length; i++) {
+                if (tableBody.children[i].cells[0].innerText == selected_name) {
+                    tableBody.children[i].classList.toggle('selected');
+                }
+            }
+
+            receivedImage1.src = "data:image/jpeg;base64," + data.img1;
+            receivedImage2.src = "data:image/jpeg;base64," + data.img2;
+            receivedImage3.src = "data:image/jpeg;base64," + data.img3;
+
+            pause_state = data.pause_state
+
+            if (pause_state) {
+                btn.innerHTML = "Запустить симуляцию";
+            } else {
+                btn.innerHTML = "Остановить симуляцию";
+            }
+
+            // if ((pressedKeys["ArrowUp"] ? 1.0 : 0.0) - (pressedKeys["ArrowDown"] ? 1.0 : 0.0) == (pressedKeys["ArrowLeft"] ? 2.0 : 0.0) - (pressedKeys["ArrowRight"] ? 2.0 : 0.0) == 0) {
+            //     noControl();
+            // } else {
+            //     sendControl();
+            // }
+        }
+
+        async function noControl() {
+            const zer = 0
+        }
+
+        ws_info.onmessage = function (event) {
+            var data = JSON.parse(event.data)
+            updateData(data)
+        };
+
+        async function takeControl() {
+            const response = await fetch('http://127.0.0.1:8000/control_node', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({"name": selected_name, "v": 0.0, "theta": 0.0})
+            });
+
+            updateData(await response.json());
+        }
+
+        async function selectOnImage(x, y) {
+            const response = await fetch('http://127.0.0.1:8000/select_on_image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({"name": "", "v": x, "theta": y})
+            });
+
+            updateData(await response.json());
+
+            document.getElementById('add_robot_name').value = selected_name;
+        }
+
+        document.getElementById('receivedImage1').addEventListener('mousedown', function(event) {
+            const currentWidth = this.offsetWidth;
+            const currentHeight = this.offsetHeight;
+
+            img_x = event.offsetX;
+            img_y = event.offsetY;
+
+            selectOnImage(img_x / currentWidth, (currentHeight - img_y) / currentHeight);
+        });
+
+        async function controlOnImage(x, y) {
+            const response = await fetch('http://127.0.0.1:8000/control_on_image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({"name": '', "v": x, "theta": y})
+            });
+
+            updateData(await response.json());
+        }
+
+        document.getElementById('receivedImage1').addEventListener('dblclick', function(event) {
+            const currentWidth = this.offsetWidth;
+            const currentHeight = this.offsetHeight;
+
+            img_x = event.offsetX;
+            img_y = event.offsetY;
+
+            controlOnImage(img_x / currentWidth, (currentHeight - img_y) / currentHeight)
+        });
+
+        const pressedKeys = {};
+
+        async function sendControl() {
+            if (selected_name != undefined) {
+                v = (pressedKeys["ArrowUp"] ? 1 : 0) - (pressedKeys["ArrowDown"] ? 1 : 0)
+                theta = (pressedKeys["ArrowLeft"] ? 1 : 0) - (pressedKeys["ArrowRight"] ? 1 : 0)
+                
+                const response = await fetch('http://127.0.0.1:8000/control', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({"name": selected_name, "v": v, "theta": theta})
+                });
+            }
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.repeat) return;
+            const key = event.code; 
+            if (!pressedKeys[key]) {
+                pressedKeys[key] = true;
+            }
+            sendControl();
+        });
+        document.addEventListener('keyup', (event) => {
+            const key = event.code;
+            if (pressedKeys[key]) {
+                delete pressedKeys[key];
+            }
+            sendControl();
+        });
+        // document.addEventListener('keypress', (event) => {
+        //     sendControl()
+        // });
+        async function stopControl() {
+            const response = await fetch('http://127.0.0.1:8000/stop_control', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({"name": selected_name, "v": 0.0, "theta": 0.0})
+            });
+
+            updateData(await response.json());
+        }
+        window.addEventListener('blur', () => {
+            Object.keys(pressedKeys).forEach(key => delete pressedKeys[key]);
+            stopControl();
+        });
+
+        const toggle = document.getElementById('mySwitch');
+        
+        toggle.addEventListener('change', function() {
+            if (this.checked) {
+                receivedImage1.style.display = 'none';
+                receivedImage3.style.display = 'block';
+            } else {
+                receivedImage1.style.display = 'block';
+                receivedImage3.style.display = 'none';
+            }
+        });
+
+        async function handlePauseSwitch() {
+            const btn = document.getElementById("pauseButton");
+            btn.disabled = true;
+
+            const response = await fetch('http://127.0.0.1:8000/pause_simulation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+
+            updateData(await response.json());
+
+            if (pause_state) {
+                setTimeout(() => {
+                    btn.disabled = false;
+                }, 3000);
+            } else {
+                setTimeout(() => {
+                    btn.disabled = false;
+                }, 10000);
+            }
+        }
+
+        async function addRobot() {
+            const add_robot_name = document.getElementById('add_robot_name').value;
+            const add_robot_x = document.getElementById('add_robot_x').valueAsNumber;
+            const add_robot_y = document.getElementById('add_robot_y').valueAsNumber;
+            const add_robot_yaw = document.getElementById('add_robot_yaw').valueAsNumber;
+
+            const response = await fetch('http://127.0.0.1:8000/add_robot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "name": add_robot_name, 
+                    "x": add_robot_x, 
+                    "y": add_robot_y, 
+                    "Y": add_robot_yaw})
+            });
+
+            if (selected_name != undefined) {
+                document.getElementById('add_robot_name').value = selected_name;
+            } else {
+                document.getElementById('add_robot_name').value = '';
+            }
+            document.getElementById('add_robot_x').value = "0.00";
+            document.getElementById('add_robot_y').value = "0.00";
+            document.getElementById('add_robot_yaw').value = "0.00";
+
+            updateData(await response.json());
+        }
+
+        async function removeRobot() {
+            const add_robot_name = document.getElementById('add_robot_name').value;
+
+            const btn = document.getElementById("removeButton");
+            btn.disabled = true;
+
+            const response = await fetch('http://127.0.0.1:8000/remove_robot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({"name": add_robot_name})
+            });
+
+            if (selected_name == add_robot_name) {
+                document.getElementById('add_robot_name').value = '';
+            } else {
+                if (selected_name != undefined) {
+                    document.getElementById('add_robot_name').value = selected_name;
+                } else {
+                    document.getElementById('add_robot_name').value = '';
+                }
+            }
+
+            document.getElementById('add_robot_x').value = "0.00";
+            document.getElementById('add_robot_y').value = "0.00";
+            document.getElementById('add_robot_yaw').value = "0.00";
+
+            updateData(await response.json());
+
+            setTimeout(() => {
+                btn.disabled = false;
+            }, 3000);
+        }
+
+        async function addTask() {
+            const add_robot_name = document.getElementById('add_robot_name').value;
+            const add_robot_x = document.getElementById('add_robot_x').valueAsNumber;
+            const add_robot_y = document.getElementById('add_robot_y').valueAsNumber;
+            const add_robot_yaw = document.getElementById('add_robot_yaw').valueAsNumber;
+
+            const response = await fetch('http://127.0.0.1:8000/add_task', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "name": add_robot_name, 
+                    "x": add_robot_x, 
+                    "y": add_robot_y})
+            });
+
+            if (selected_name != undefined) {
+                document.getElementById('add_robot_name').value = selected_name;
+            } else {
+                document.getElementById('add_robot_name').value = '';
+            }
+            document.getElementById('add_robot_x').value = "0.00";
+            document.getElementById('add_robot_y').value = "0.00";
+            document.getElementById('add_robot_yaw').value = "0.00";
+
+            updateData(await response.json());
+        }
+
+    </script>
+</body>
+
+</html>
